@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.1.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="HadoopHadoop Map-Reduce模型Hadoop的整体计算数据流如下图所示：MapReduce 编程模型将计算过程分为两个阶段 Map和Reduce，这两个阶段都接受key-value元组作为输入。用户一般通过指定map和reduce两个函数即可，其他的交给Hadoop框架。 Hadoop将整个输入分为固定大小的块(input split)来作为每个Map任务的输入，也就是说针对每一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop编程模型与YARN">
+<meta property="og:url" content="http://example.com/2022/04/17/hadoop/index.html">
+<meta property="og:site_name" content="fgump的博客">
+<meta property="og:description" content="HadoopHadoop Map-Reduce模型Hadoop的整体计算数据流如下图所示：MapReduce 编程模型将计算过程分为两个阶段 Map和Reduce，这两个阶段都接受key-value元组作为输入。用户一般通过指定map和reduce两个函数即可，其他的交给Hadoop框架。 Hadoop将整个输入分为固定大小的块(input split)来作为每个Map任务的输入，也就是说针对每一">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/data-flow.png">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/map-reduce.png">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/shuffle.png">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/reduceshuffle.jpg">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/yarn.png">
+<meta property="og:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/hadoop-yarn.png">
+<meta property="article:published_time" content="2022-04-17T08:10:28.000Z">
+<meta property="article:modified_time" content="2022-04-17T08:25:03.144Z">
+<meta property="article:author" content="fgump">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="YARN">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/data-flow.png">
+
+<link rel="canonical" href="http://example.com/2022/04/17/hadoop/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>Hadoop编程模型与YARN | fgump的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">fgump的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/04/17/hadoop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="fgump">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="fgump的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hadoop编程模型与YARN
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2022-04-17 16:10:28 / Modified: 16:25:03" itemprop="dateCreated datePublished" datetime="2022-04-17T16:10:28+08:00">2022-04-17</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/Hadoop/" itemprop="url" rel="index"><span itemprop="name">Hadoop</span></a>
+                </span>
+                  , 
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/bigdata/" itemprop="url" rel="index"><span itemprop="name">bigdata</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h3 id="Hadoop"><a href="#Hadoop" class="headerlink" title="Hadoop"></a>Hadoop</h3><h4 id="Hadoop-Map-Reduce模型"><a href="#Hadoop-Map-Reduce模型" class="headerlink" title="Hadoop Map-Reduce模型"></a>Hadoop Map-Reduce模型</h4><p>Hadoop的整体计算数据流如下图所示：MapReduce 编程模型将计算过程分为两个阶段 Map和Reduce，这两个阶段都接受key-value元组作为输入。用户一般通过指定map和reduce两个函数即可，其他的交给Hadoop框架。</p>
+<p>Hadoop将整个输入分为固定大小的块(input split)来作为<br>每个Map任务的输入，也就是说针对每一个input split启动一个map task,而且常常split的大小与Hadoop分布式文件系统HDFS的block大小(128M)是相等的。这个是可以通过参数来配置的。split的大小一般设置为hdfs的block大小是因为，在大数据系统中，相对移动数据和移动程序，移动数据的开销比较大，因此通常会将map任务调度在拥有split的那个节点中运行(data locality)，而如果split的大小多于1个block，不能保证节点中都拥有这两个文件block，那么这个map task<br>无论运行在哪个节点都需要跨节点传输数据。但是有时候因为如果这个节点因为运行了其他task，并不能满足data locality，则Hadoop会尽量将map调度在和数据在的那个节点同一个机架的另一个节点中来尽量较少数据传输的开销。<br>map task的输出仍然是key-value，但是reduce task的输入要求从每个map task 拷贝来得数据都是有序的，这一将map的输出转化为reduce task输入的过程称为shuffle。最终有reduce将结果写入到HDFS系统中，而map的输入作为中间结果则并不是直接写入到HDFS，而是写入本地磁盘(因为map task的输出是中间结果，最终整个job完成还是需要删除的。而且可能会失败，如果写入到hdfs，重新调度失败的task，不但任务要重做还要删除hdfs中的数据，hdfs中的block是有三副本的，因此写入开销比较大)。</p>
+<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/data-flow.png"></p>
+<p>具体的Map-Reduce过程如下图所示。map将输入split处理后的结果写入磁盘等待reduce task<br>来拷贝，这里注意的是如果有多个reducer，那么每个map task的输出需要进行partion和sort操作(具体过程见Shuffle and Sort)。partion可以理解为对map的输出中的key进行划分，确保同一个key被分到同一个partion，而每个partion可以拥有多个key。每个partion对应于一个reducer，等全部map task完成后，对应partion的reducer会来取对应partion的数据。每个partion中的所有数据时根据key排序好的。途中表示的为三个mapper和2个reducer因此，每个mapper的输出被分为两个partion。具体的sort和partion过程，以及数据的存放形式见Shuffle and Sort。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/map-reduce.png"></p>
+<h4 id="shuffle-and-Sort"><a href="#shuffle-and-Sort" class="headerlink" title="shuffle and Sort"></a>shuffle and Sort</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MapReduce makes the guarantee that the input to every reducer is sorted by key.</span><br><span class="line">The process by which the system performs the sort—and transfers</span><br><span class="line">the map outputs to the reducers as inputs—is known as the shuffle</span><br></pre></td></tr></table></figure>
+
+<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/shuffle.png"></p>
+<p>map task中的输出结果首先写入到circular memory buffer，默认大小为100M，buffer的大小也可以通过参数配置。当buffer中内容达到了某个阙值，会有后台线程会将buffer中的数据写入到文件(本地磁盘)，map 输出到buffer和buffer数据读出到文件时同时进行的，除非buffer中已经满了，那么map会阻塞直到后台程序将所有数据写入到文件。后台程序在将<br>buffer数据写入到文件之前会首先对数据进行partion，而且会对每个partion在内存中进行排序，如果定义了combiner则会执行combiner函数。每次buffer达到阙值之后，后台线程都会写入到一个新文件，所以当map task的输出写完后，会有多个split file。这个split file 是分区有序的，即在每个分区内，数据都是根据key排好序的。在map task完成之前，所有的spil files会被merge成一个分区有序文件。在合并期间可能还会执行combiner函数来减少写入磁盘的数据。如果spile file太少可能就不执行combiner函数(对每个split file执行combiner函数)了，因为考虑到执行combiner函数也有开销，文件太少不值得。</p>
+<p>每个reducer需要跨节点来请求map task的输出。为了尽快完成数据拷贝，每当有一个map任务完成，reducer都会去获取数据(多线程)。map的任务完成后会通知application master(YARN中会讲到，applicatinn master是监控任务的执行情况)，而每个reducer会有后台线程不断的去询问applicaton master是否有map完成并获取map输出文件位置。拷贝来的数据首先写入到<br>内存buffer，这个buffer大小可以设置，通常比较大，因为shuffle阶段，reduce无法进行。<br>当内存buffer中数据达到某个阙值(默认0.8)则类似于map阶段，溢出到文件。则最终也会在磁盘生成多个split file如下图所示。当磁盘中有多个split file，会有后台线程去merge这些文件。磁盘merge和内存merge是同时运行的(merge1和merge2)。最后一轮merge(merge3)通常是来自内存和磁盘，从而减少一次读写文件。最终生成一个最终的排序文件作为reduce的输入。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">This final merge can come from a mixture of in-memory and</span><br><span class="line">on-disk segments.</span><br></pre></td></tr></table></figure>
+<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/reduceshuffle.jpg"></p>
+<h4 id="combiner"><a href="#combiner" class="headerlink" title="combiner"></a>combiner</h4><p>许多 MapReduce 作业受到集群上可用带宽的限制，因此尽量减少在 map 和 reduce 任务之间传输的数据是值得的。 Hadoop 允许用户指定要在map的输出上运行combiner函数，combiner函数的output 形成 reduce 函数的输入。 因为combiner函数是一种优化，所以 Hadoop 不保证它会为特定的map输出调用多少次。换句话说，调用combiner零次、一次或多次都不影响最终reducer的输出。<br>举个Hadoop权威指南的例子(年份，温度)，map-reduce job为找到每年的最高温度。<br>第一个map产生输出(1950,0),(1950,20),(1950,10)<br>第二个map产生输出(1950,25),(1950,15)<br>如果没有combiner函数那么最终reducer的输入为((1950, [0, 20, 10, 25, 15]))<br>如果本例中combiner函数和reduce函数一样，那么reduceer 的输入为(1950, [20, 25])，<br>从而减少了map到reduce的数据拷贝。</p>
+<h4 id="YARN"><a href="#YARN" class="headerlink" title="YARN"></a>YARN</h4><p>Apache YARN(Yet Another Resource Negotiator),是一个资源管理系统。YARN在Hadoop2中被引入，因为在Hadoop1中的jobtracker背负了太多的任务，比如资源调度，task监控。引入YARN将部分任务分离出来。<br>Yarn的核心组件包括两个长久运行的守护进程，resource manager和node manager。 resource manager每个集群只有一个，node manager每个机器一个。<br>Container : 抽象的资源包括内存，cpu等。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/yarn.png"><br>向yarn的请求资源的流程为上图所示。首先客户端向resource manager提交job(step1)，资源管理器会首先联系某个NodeManager启动一个Cotainer来运行application master(step2a和step2b),application master运行的程序根据不同的上层应用而不同。如果本节点的container满足了程序的要求，那么无需申请更多container，否则该applicatin master会<br>向resource manager请求跟多container(step3),然后会联系其他的node manager进行分布式计算(step4a,step4b)。具体的以Hadoop提交map-reduce作业为例详细解释，如下图所示。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/hadoop-yarn.png"><br>首先MapReduce程序会向resoure manager请求一个应用程序ID(step2),map-reduce客户端也会检查job的合法性，比如输入文件和输出文件是否存在，如果不合法(比如输入文件不存在，输出文件已经存在)则直接报错。注意job的input spile也是在这里计算的。最后需要将job所需要的资源比如job jar文件，配置文件，计算好的input spiles(应该只是一个划分信息，并不是真正的数据)等等信息拷贝打包发送给资源管理器来提交job(step4)</p>
+<p>resource manager收到job后，其中调度器会处理这个请求然后分配一个container，resource manager会通知对应节点的node manager来这个container来运行MRAppMaster程序，该程序主要是监督job的完成情况，会创建一系列的bookkeeping 对象来维护跟踪job的进度。接着会创建获取input split，然后创建一系列的mao和reduce task对象。application master需要决定如何运行这个job，如果这个job比较小，那么applicaion master 会在自己的几点上运行整个job，否则application master 会向resource manager请求containers来运行这些map和reduce task(step8)。map请求优先级会高于reduce，因为只有全部的map task完成才会进入reduce task的sort阶段。在资源请求得到满足后，application master 会向对应的node mananger发送信息来启动container，这里的container执行的main class 为YarnChild，并由YarnChild来执行task，执行task之前。<br>YarnChild会获取执行这个task的相关资源(step10),最后运行map或者reduce task(step11)。</p>
+<h4 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h4><p>[1] Hadoop,the Definitive Guide-Storage and analysis at internet scale</p>
+<p>[2] <a target="_blank" rel="noopener" href="https://andr-robot.github.io/Hadoop%E4%B8%ADShuffle%E8%BF%87%E7%A8%8B/">https://andr-robot.github.io/Hadoop%E4%B8%ADShuffle%E8%BF%87%E7%A8%8B/</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+              <a href="/tags/YARN/" rel="tag"># YARN</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/04/17/test/" rel="prev" title="test">
+      <i class="fa fa-chevron-left"></i> test
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Hadoop"><span class="nav-number">1.</span> <span class="nav-text">Hadoop</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Hadoop-Map-Reduce%E6%A8%A1%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">Hadoop Map-Reduce模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#shuffle-and-Sort"><span class="nav-number">1.2.</span> <span class="nav-text">shuffle and Sort</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#combiner"><span class="nav-number">1.3.</span> <span class="nav-text">combiner</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#YARN"><span class="nav-number">1.4.</span> <span class="nav-text">YARN</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE"><span class="nav-number">1.5.</span> <span class="nav-text">参考文献</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">fgump</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/smartlxh" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;smartlxh" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">fgump</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
