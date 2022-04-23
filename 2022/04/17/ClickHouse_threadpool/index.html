@@ -20,28 +20,33 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta property="og:type" content="website">
-<meta property="og:title" content="fgump的博客">
-<meta property="og:url" content="http://example.com/index.html">
+  <meta name="description" content="线程池的类关系ClickHouse中的线程池实现定义在ThreadPool.文件中。类似于boost::threadpool。几个主要类关系为下 123&#x2F;&#x2F;&#x2F; ThreadPool with std::thread for threads.using FreeThreadPool &#x3D; ThreadPoolImpl&lt;std::thread&gt;;class GlobalThreadPool">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ClickHouse线程池">
+<meta property="og:url" content="http://example.com/2022/04/17/ClickHouse_threadpool/index.html">
 <meta property="og:site_name" content="fgump的博客">
+<meta property="og:description" content="线程池的类关系ClickHouse中的线程池实现定义在ThreadPool.文件中。类似于boost::threadpool。几个主要类关系为下 123&#x2F;&#x2F;&#x2F; ThreadPool with std::thread for threads.using FreeThreadPool &#x3D; ThreadPoolImpl&lt;std::thread&gt;;class GlobalThreadPool">
 <meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-04-17T08:10:28.000Z">
+<meta property="article:modified_time" content="2022-04-23T05:27:08.014Z">
 <meta property="article:author" content="fgump">
+<meta property="article:tag" content="ClickHouse">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="http://example.com/">
+<link rel="canonical" href="http://example.com/2022/04/17/ClickHouse_threadpool/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'en'
   };
 </script>
 
-  <title>fgump的博客</title>
+  <title>ClickHouse线程池 | fgump的博客</title>
   
 
 
@@ -149,9 +154,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
@@ -167,10 +173,9 @@
       <meta itemprop="name" content="fgump的博客">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/04/17/ClickHouse_threadpool/" class="post-title-link" itemprop="url">ClickHouse线程池</a>
-        </h2>
+        <h1 class="post-title" itemprop="name headline">
+          ClickHouse线程池
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -209,7 +214,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h3 id="线程池的类关系"><a href="#线程池的类关系" class="headerlink" title="线程池的类关系"></a>线程池的类关系</h3><p>ClickHouse中的线程池实现定义在ThreadPool.文件中。类似于boost::threadpool。<br>几个主要类关系为下</p>
+        <h3 id="线程池的类关系"><a href="#线程池的类关系" class="headerlink" title="线程池的类关系"></a>线程池的类关系</h3><p>ClickHouse中的线程池实现定义在ThreadPool.文件中。类似于boost::threadpool。<br>几个主要类关系为下</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/// ThreadPool with std::thread for threads.</span><br><span class="line">using FreeThreadPool = ThreadPoolImpl&lt;std::thread&gt;;</span><br><span class="line">class GlobalThreadPool : public FreeThreadPool, private boost::noncopyable</span><br></pre></td></tr></table></figure>
 <p>线程池中的任务定义为JobWithPriority，实现为ThreadPoolImpl内部的一个结构体。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">using Job = std::function&lt;void()&gt;;</span><br><span class="line">struct JobWithPriority</span><br><span class="line">    &#123;</span><br><span class="line">        Job job;</span><br><span class="line">        int priority;</span><br><span class="line"></span><br><span class="line">        JobWithPriority(Job job_, int priority_)</span><br><span class="line">            : job(job_), priority(priority_) &#123;&#125;</span><br><span class="line"></span><br><span class="line">        bool operator&lt; (const JobWithPriority &amp; rhs) const</span><br><span class="line">        &#123;</span><br><span class="line">            return priority &lt; rhs.priority;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br></pre></td></tr></table></figure>
@@ -221,208 +226,33 @@
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">template &lt;typename Function, typename... Args&gt;</span><br><span class="line">    explicit ThreadFromGlobalPool(Function &amp;&amp; func, Args &amp;&amp;... args)</span><br><span class="line">        : state(std::make_shared&lt;Poco::Event&gt;())</span><br><span class="line">        , thread_id(std::make_shared&lt;std::thread::id&gt;())</span><br><span class="line">    &#123;</span><br><span class="line">        /// NOTE: If this will throw an exception, the destructor won&#x27;t be called.</span><br><span class="line">        //scheduleOrThrow中的参数为lambda表达式</span><br><span class="line">        GlobalThreadPool::instance().scheduleOrThrow([</span><br><span class="line">            thread_id = thread_id,</span><br><span class="line">            state = state,</span><br><span class="line">            func = std::forward&lt;Function&gt;(func),</span><br><span class="line">            args = std::make_tuple(std::forward&lt;Args&gt;(args)...)]() mutable /// mutable is needed to destroy capture</span><br><span class="line">        &#123;</span><br><span class="line">            auto event = std::move(state);</span><br><span class="line">            SCOPE_EXIT(event-&gt;set());</span><br><span class="line"></span><br><span class="line">            thread_id = std::make_shared&lt;std::thread::id&gt;(std::this_thread::get_id());</span><br><span class="line"></span><br><span class="line">            /// This moves are needed to destroy function and arguments before exit.</span><br><span class="line">            /// It will guarantee that after ThreadFromGlobalPool::join all captured params are destroyed.</span><br><span class="line">            auto function = std::move(func);</span><br><span class="line">            auto arguments = std::move(args);</span><br><span class="line"></span><br><span class="line">            /// Thread status holds raw pointer on query context, thus it always must be destroyed</span><br><span class="line">            /// before sending signal that permits to join this thread.</span><br><span class="line">            DB::ThreadStatus thread_status;</span><br><span class="line">            std::apply(function, arguments);</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 <h4 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h4><p>[1] <a target="_blank" rel="noopener" href="https://tech.meituan.com/2020/04/02/java-pooling-pratice-in-meituan.html">https://tech.meituan.com/2020/04/02/java-pooling-pratice-in-meituan.html</a></p>
 
-      
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
+          <div class="post-tags">
+              <a href="/tags/ClickHouse/" rel="tag"># ClickHouse</a>
+          </div>
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/04/17/hadoop/">
+        
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="fgump">
-      <meta itemprop="description" content="">
-    </span>
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="fgump的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/04/17/hadoop/" class="post-title-link" itemprop="url">Hadoop编程模型与YARN</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-04-17 16:10:28" itemprop="dateCreated datePublished" datetime="2022-04-17T16:10:28+08:00">2022-04-17</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-04-18 16:04:18" itemprop="dateModified" datetime="2022-04-18T16:04:18+08:00">2022-04-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="Hadoop"><a href="#Hadoop" class="headerlink" title="Hadoop"></a>Hadoop</h3><h4 id="Hadoop-Map-Reduce模型"><a href="#Hadoop-Map-Reduce模型" class="headerlink" title="Hadoop Map-Reduce模型"></a>Hadoop Map-Reduce模型</h4><p>Hadoop的整体计算数据流如下图所示：MapReduce 编程模型将计算过程分为两个阶段 Map和Reduce，这两个阶段都接受key-value元组作为输入。用户一般通过指定map和reduce两个函数即可，其他的交给Hadoop框架。</p>
-<p>Hadoop将整个输入分为固定大小的块(input split)来作为<br>每个Map任务的输入，也就是说针对每一个input split启动一个map task,而且常常split的大小与Hadoop分布式文件系统HDFS的block大小(128M)是相等的。这个是可以通过参数来配置的。split的大小一般设置为hdfs的block大小是因为，在大数据系统中，相对移动数据和移动程序，移动数据的开销比较大，因此通常会将map任务调度在拥有split的那个节点中运行(data locality)，而如果split的大小多于1个block，不能保证节点中都拥有这两个文件block，那么这个map task<br>无论运行在哪个节点都需要跨节点传输数据。但是有时候因为如果这个节点因为运行了其他task，并不能满足data locality，则Hadoop会尽量将map调度在和数据在的那个节点同一个机架的另一个节点中来尽量较少数据传输的开销。<br>map task的输出仍然是key-value，但是reduce task的输入要求从每个map task 拷贝来得数据都是有序的，这一将map的输出转化为reduce task输入的过程称为shuffle。最终有reduce将结果写入到HDFS系统中，而map的输入作为中间结果则并不是直接写入到HDFS，而是写入本地磁盘(因为map task的输出是中间结果，最终整个job完成还是需要删除的。而且可能会失败，如果写入到hdfs，重新调度失败的task，不但任务要重做还要删除hdfs中的数据，hdfs中的block是有三副本的，因此写入开销比较大)。</p>
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/data-flow.png"></p>
-<p>具体的Map-Reduce过程如下图所示。map将输入split处理后的结果写入磁盘等待reduce task<br>来拷贝，这里注意的是如果有多个reducer，那么每个map task的输出需要进行partion和sort操作(具体过程见Shuffle and Sort)。partion可以理解为对map的输出中的key进行划分，确保同一个key被分到同一个partion，而每个partion可以拥有多个key。每个partion对应于一个reducer，等全部map task完成后，对应partion的reducer会来取对应partion的数据。每个partion中的所有数据时根据key排序好的。途中表示的为三个mapper和2个reducer因此，每个mapper的输出被分为两个partion。具体的sort和partion过程，以及数据的存放形式见Shuffle and Sort。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/map-reduce.png"></p>
-<h4 id="shuffle-and-Sort"><a href="#shuffle-and-Sort" class="headerlink" title="shuffle and Sort"></a>shuffle and Sort</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">MapReduce makes the guarantee that the input to every reducer is sorted by key.</span><br><span class="line">The process by which the system performs the sort—and transfers</span><br><span class="line">the map outputs to the reducers as inputs—is known as the shuffle</span><br></pre></td></tr></table></figure>
-
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/shuffle.png"></p>
-<p>map task中的输出结果首先写入到circular memory buffer，默认大小为100M，buffer的大小也可以通过参数配置。当buffer中内容达到了某个阙值，会有后台线程会将buffer中的数据写入到文件(本地磁盘)，map 输出到buffer和buffer数据读出到文件时同时进行的，除非buffer中已经满了，那么map会阻塞直到后台程序将所有数据写入到文件。后台程序在将<br>buffer数据写入到文件之前会首先对数据进行partion，而且会对每个partion在内存中进行排序，如果定义了combiner则会执行combiner函数。每次buffer达到阙值之后，后台线程都会写入到一个新文件，所以当map task的输出写完后，会有多个split file。这个split file 是分区有序的，即在每个分区内，数据都是根据key排好序的。在map task完成之前，所有的spil files会被merge成一个分区有序文件。在合并期间可能还会执行combiner函数来减少写入磁盘的数据。如果spile file太少可能就不执行combiner函数(对每个split file执行combiner函数)了，因为考虑到执行combiner函数也有开销，文件太少不值得。</p>
-<p>每个reducer需要跨节点来请求map task的输出。为了尽快完成数据拷贝，每当有一个map任务完成，reducer都会去获取数据(多线程)。map的任务完成后会通知application master(YARN中会讲到，applicatinn master是监控任务的执行情况)，而每个reducer会有后台线程不断的去询问applicaton master是否有map完成并获取map输出文件位置。拷贝来的数据首先写入到<br>内存buffer，这个buffer大小可以设置，通常比较大，因为shuffle阶段，reduce无法进行。<br>当内存buffer中数据达到某个阙值(默认0.8)则类似于map阶段，溢出到文件。则最终也会在磁盘生成多个split file如下图所示。当磁盘中有多个split file，会有后台线程去merge这些文件。磁盘merge和内存merge是同时运行的(merge1和merge2)。最后一轮merge(merge3)通常是来自内存和磁盘，从而减少一次读写文件。最终生成一个最终的排序文件作为reduce的输入。</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">This final merge can come from a mixture of in-memory and</span><br><span class="line">on-disk segments.</span><br></pre></td></tr></table></figure>
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/reduceshuffle.jpg"></p>
-<h4 id="combiner"><a href="#combiner" class="headerlink" title="combiner"></a>combiner</h4><p>许多 MapReduce 作业受到集群上可用带宽的限制，因此尽量减少在 map 和 reduce 任务之间传输的数据是值得的。 Hadoop 允许用户指定要在map的输出上运行combiner函数，combiner函数的output 形成 reduce 函数的输入。 因为combiner函数是一种优化，所以 Hadoop 不保证它会为特定的map输出调用多少次。换句话说，调用combiner零次、一次或多次都不影响最终reducer的输出。<br>举个Hadoop权威指南的例子(年份，温度)，map-reduce job为找到每年的最高温度。<br>第一个map产生输出(1950,0),(1950,20),(1950,10)<br>第二个map产生输出(1950,25),(1950,15)<br>如果没有combiner函数那么最终reducer的输入为((1950, [0, 20, 10, 25, 15]))<br>如果本例中combiner函数和reduce函数一样，那么reduceer 的输入为(1950, [20, 25])，<br>从而减少了map到reduce的数据拷贝。</p>
-<h4 id="YARN"><a href="#YARN" class="headerlink" title="YARN"></a>YARN</h4><p>Apache YARN(Yet Another Resource Negotiator),是一个资源管理系统。YARN在Hadoop2中被引入，因为在Hadoop1中的jobtracker背负了太多的任务，比如资源调度，task监控。引入YARN将部分任务分离出来。<br>Yarn的核心组件包括两个长久运行的守护进程，resource manager和node manager。 resource manager每个集群只有一个，node manager每个机器一个。<br>Container : 抽象的资源包括内存，cpu等。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/yarn.png"><br>向yarn的请求资源的流程为上图所示。首先客户端向resource manager提交job(step1)，资源管理器会首先联系某个NodeManager启动一个Cotainer来运行application master(step2a和step2b),application master运行的程序根据不同的上层应用而不同。如果本节点的container满足了程序的要求，那么无需申请更多container，否则该applicatin master会<br>向resource manager请求跟多container(step3),然后会联系其他的node manager进行分布式计算(step4a,step4b)。具体的以Hadoop提交map-reduce作业为例详细解释，如下图所示。<br><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/hadoop-yarn.png"><br>首先MapReduce程序会向resoure manager请求一个应用程序ID(step2),map-reduce客户端也会检查job的合法性，比如输入文件和输出文件是否存在，如果不合法(比如输入文件不存在，输出文件已经存在)则直接报错。注意job的input spile也是在这里计算的。最后需要将job所需要的资源比如job jar文件，配置文件，计算好的input spiles(应该只是一个划分信息，并不是真正的数据)等等信息拷贝打包发送给资源管理器来提交job(step4)</p>
-<p>resource manager收到job后，其中调度器会处理这个请求然后分配一个container，resource manager会通知对应节点的node manager来这个container来运行MRAppMaster程序，该程序主要是监督job的完成情况，会创建一系列的bookkeeping 对象来维护跟踪job的进度。接着会创建获取input split，然后创建一系列的mao和reduce task对象。application master需要决定如何运行这个job，如果这个job比较小，那么applicaion master 会在自己的几点上运行整个job，否则application master 会向resource manager请求containers来运行这些map和reduce task(step8)。map请求优先级会高于reduce，因为只有全部的map task完成才会进入reduce task的sort阶段。在资源请求得到满足后，application master 会向对应的node mananger发送信息来启动container，这里的container执行的main class 为YarnChild，并由YarnChild来执行task，执行task之前。<br>YarnChild会获取执行这个task的相关资源(step10),最后运行map或者reduce task(step11)。</p>
-<h4 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h4><p>[1] White, Tom. “Hadoop-The Definitive Guide: Storage and Analysis at Internet Scale. 4th.” (2015).</p>
-<p>[2] <a target="_blank" rel="noopener" href="https://andr-robot.github.io/Hadoop%E4%B8%ADShuffle%E8%BF%87%E7%A8%8B/">https://andr-robot.github.io/Hadoop%E4%B8%ADShuffle%E8%BF%87%E7%A8%8B/</a></p>
-
-      
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/04/17/hadoop/" rel="prev" title="Hadoop编程模型与YARN">
+      <i class="fa fa-chevron-left"></i> Hadoop编程模型与YARN
+    </a></div>
+      <div class="post-nav-item"></div>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
       </footer>
+    
   </article>
   
   
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/04/17/spark/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="fgump">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="fgump的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/04/17/spark/" class="post-title-link" itemprop="url">Spark-RDD与DAG调度</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-04-17 16:10:28" itemprop="dateCreated datePublished" datetime="2022-04-17T16:10:28+08:00">2022-04-17</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-04-18 16:08:05" itemprop="dateModified" datetime="2022-04-18T16:08:05+08:00">2022-04-18</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
-                </span>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h3 id="RDD"><a href="#RDD" class="headerlink" title="RDD"></a>RDD</h3><p>RDD是一个只读的分区的数据集合，可以通过两种方式来生成</p>
-<ol>
-<li>data in stable storage,例如HDFS</li>
-<li>other RDDs,通过对已经存在的RDD经过transformations操作，比如map,filter,join等。<br>需要注意的是，RDD中不一定含有物理数据，RDD只是包含了一些信息，利用这些信息我们可以从reliable storage中的数据重新计算这个RDD。</li>
-</ol>
-<h4 id="RDD的实现"><a href="#RDD的实现" class="headerlink" title="RDD的实现"></a>RDD的实现</h4><p>每个RDD对象实现了同一个接口，接口中含有下列操作(接口名字只是示意功能，具体spark实现的接口名字并不一定如此)</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">getPations 返回RDD所有partion的ID</span><br><span class="line">getIterator(partition) 获取某个分区的迭代器，进而可以访问整个partion数据</span><br><span class="line">getPreferedLocations(partiton) 指导task调度时尽量满足data locality.</span><br><span class="line">getPartitioner() 返回元数据表明RDD是否是 hash/range partitioned</span><br><span class="line">dependencies() 返回依赖的父RDD</span><br></pre></td></tr></table></figure>
-<p>比如HDFSTextFile，getPations方法返回的是其数据对应的HDFS的块ID(隐含着每个partion对应一个HDFS block),getIterator 返回一个数据流来读这个block。再如MappedDataSet的partitions和preferred locations跟他的parent RDD是相同的，但是他的iterator会将map function应用到parent RDD的每一个元素。</p>
-<h4 id="依赖的表达"><a href="#依赖的表达" class="headerlink" title="依赖的表达"></a>依赖的表达</h4><p>依赖分为两种，narrow dependency和wide dependency，如下图所示。窄依赖指，子RDD的每个partition仅仅依赖父RDD的一个partition，简而言之，父RDD的partition和子RDD的partition存在一一对应的关系。比如常见的map和filter操作。宽依赖指父RDD的每个patrition可能被子RDD的多个partition使用。形象的可以说，从父RDD角度来看，父RDD指向子RDD的箭头为一个则为窄，多个则为宽。</p>
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/dependency.png"></p>
-<h4 id="RDD操作"><a href="#RDD操作" class="headerlink" title="RDD操作"></a>RDD操作</h4><p>RDD操作分为transformations和actins,transformation从一个已经存在的RDD生成一个新的RDD。Actions会触发在RDD上的计算并处理返回的结果，例如返回给用户或者保存到到持久存储。<br>Action是immediate effect的，而transform是lazy的，意思是spark程序中只有遇到action才会执行之前定义的一系列tranform进行实际的计算。一般的RDD操作如果返回的是一个新RDD，那么是一个transformation操作，否则是一个action。总结如下，图来自[1]。</p>
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/opetions-spark.png"></p>
-<h3 id="Shared-Variables"><a href="#Shared-Variables" class="headerlink" title="Shared Variables"></a>Shared Variables</h3><p>Spark程序可能经常会需要获取非RDD数据，比如Hadoop权威指南[3]中的例子，如下所示</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">val lookup = Map(1 -&gt; &quot;a&quot;, 2 -&gt; &quot;e&quot;, 3 -&gt; &quot;i&quot;, 4 -&gt; &quot;o&quot;, 5 -&gt; &quot;u&quot;)</span><br><span class="line">val result = sc.parallelize(Array(2, 1, 3)).map(lookup(_))</span><br><span class="line">assert(result.collect().toSet === Set(&quot;a&quot;, &quot;e&quot;, &quot;i&quot;))</span><br></pre></td></tr></table></figure>
-<p>虽然工作正常，但是这样lookup的数据会被scala程序序列化成closure的一部分，没有效率。</p>
-<h4 id="Broadcast-Variables"><a href="#Broadcast-Variables" class="headerlink" title="Broadcast Variables"></a>Broadcast Variables</h4><p>broadcast variable会被序列化然后发送到每个executor(可以理解为worker节点)中去，然后会被cache，所以在这个executror中执行的task都可以直接获取他。而像上述所说的普通变量序列化为闭包的一部分，则每个task都需要通过网络传输一次这个变量数据。Broadcast variable不可改变。如果需要改变则需要Accumulators。</p>
-<h4 id="Accumulators"><a href="#Accumulators" class="headerlink" title="Accumulators"></a>Accumulators</h4><p>一个Accumulators是一个共享变量，但是只能故名思议只能累加，类似于Map-Reduce中的counters。</p>
-<h3 id="Spark-job-run"><a href="#Spark-job-run" class="headerlink" title="Spark job run"></a>Spark job run</h3><p>spark的job调度分为两个层面，一个是DAG scheduler将linage graph划分为stages，<br>在每个stages，又有task scheduler根据每个execturor的情况进行task的调度，基本原则就是data locality。这里主要讲下DAG Scheduler划分stage的原则。<br>上述讲过RDD的依赖有窄依赖和宽依赖，对于窄依赖而言，可以每个partition分配一个task来进行计算并将结过输出到一系列新的分区中，此过程类似于Map-Reduce中的Map side，因此这样的task被称为Shuffle map tasks。而宽依赖因为依赖父RDD多个分区，在进行下一步的计算之前需要一个shuffle过程。而这个shuffle过程就成为了分割stage的分割线。如下图所示。</p>
-<p><img src="https://lxhblog.oss-cn-beijing.aliyuncs.com/bigdata/stages.png"></p>
-<p>分为三个stage，stage1和stage2均是窄依赖，而join操作是宽依赖，因此在进行join操作之前需要一个shuffle过程。至于为什么要划分stages，个人可能是每个stage中都是窄依赖，可能有利于<br>流水线的执行和优化。</p>
-<h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p>[1]Zaharia, Matei, et al. “Resilient Distributed Datasets: A {Fault-Tolerant} Abstraction for {In-Memory} Cluster Computing.” 9th USENIX Symposium on Networked Systems Design and Implementation (NSDI 12). 2012.</p>
-<p>[2]Zaharia, Matei, et al. “Spark: Cluster computing with working sets.” 2nd USENIX Workshop on Hot Topics in Cloud Computing (HotCloud 10). 2010.</p>
-<p>[3]White, Tom. “Hadoop-The Definitive Guide: Storage and Analysis at Internet Scale. 4th.” (2015).</p>
-<p>[4]<a target="_blank" rel="noopener" href="https://www.studytime.xin/article/spark-knowledge-rdd-stage.html">https://www.studytime.xin/article/spark-knowledge-rdd-stage.html</a></p>
-<p>[5]<a target="_blank" rel="noopener" href="https://wongxingjun.github.io/2015/05/25/Spark%E4%BD%9C%E4%B8%9A%E8%B0%83%E5%BA%A6%E4%B8%ADstage%E7%9A%84%E5%88%92%E5%88%86/">https://wongxingjun.github.io/2015/05/25/Spark%E4%BD%9C%E4%B8%9A%E8%B0%83%E5%BA%A6%E4%B8%ADstage%E7%9A%84%E5%88%92%E5%88%86/</a></p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-
   
 
 
@@ -475,6 +305,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E7%B1%BB%E5%85%B3%E7%B3%BB"><span class="nav-number">1.</span> <span class="nav-text">线程池的类关系</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E5%90%AF%E5%8A%A8"><span class="nav-number">1.1.</span> <span class="nav-text">线程池的启动</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#worker%E7%BA%BF%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">worker线程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#job%E7%9A%84%E6%8F%90%E4%BA%A4"><span class="nav-number">1.3.</span> <span class="nav-text">job的提交</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE"><span class="nav-number">1.4.</span> <span class="nav-text">参考文献</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
