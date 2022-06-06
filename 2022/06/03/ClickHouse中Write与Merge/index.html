@@ -22,17 +22,18 @@
 
   <meta name="description" content="ClickHouse中write与mergewrite过程写过程中对应的Processor是MergeTreeSink。继承关系为 1MergeTreeSink-&gt;SinkToStorage-&gt;ExceptionKeepingTransform-&gt;IProcessor 其中主要的方法实现在MergeTreeSink::consume()方法中。consume方法的逻辑首先是(1)">
 <meta property="og:type" content="article">
-<meta property="og:title" content="fgump的博客">
-<meta property="og:url" content="http://example.com/2022/06/06/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/index.html">
+<meta property="og:title" content="ClickHouse中write与merge">
+<meta property="og:url" content="http://example.com/2022/06/03/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/index.html">
 <meta property="og:site_name" content="fgump的博客">
 <meta property="og:description" content="ClickHouse中write与mergewrite过程写过程中对应的Processor是MergeTreeSink。继承关系为 1MergeTreeSink-&gt;SinkToStorage-&gt;ExceptionKeepingTransform-&gt;IProcessor 其中主要的方法实现在MergeTreeSink::consume()方法中。consume方法的逻辑首先是(1)">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2022-06-06T02:31:42.837Z">
-<meta property="article:modified_time" content="2022-06-06T02:31:42.838Z">
+<meta property="article:published_time" content="2022-06-03T02:29:40.000Z">
+<meta property="article:modified_time" content="2022-06-06T08:38:32.323Z">
 <meta property="article:author" content="fgump">
+<meta property="article:tag" content="ClickHouse">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="http://example.com/2022/06/06/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/">
+<link rel="canonical" href="http://example.com/2022/06/03/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/">
 
 
 <script id="page-configurations">
@@ -45,7 +46,7 @@
   };
 </script>
 
-  <title> | fgump的博客</title>
+  <title>ClickHouse中write与merge | fgump的博客</title>
   
 
 
@@ -160,7 +161,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/06/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/03/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -173,7 +174,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          
+          ClickHouse中write与merge
         </h1>
 
         <div class="post-meta">
@@ -183,7 +184,23 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2022-06-06 10:31:42" itemprop="dateCreated datePublished" datetime="2022-06-06T10:31:42+08:00">2022-06-06</time>
+              <time title="Created: 2022-06-03 10:29:40" itemprop="dateCreated datePublished" datetime="2022-06-03T10:29:40+08:00">2022-06-03</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-06-06 16:38:32" itemprop="dateModified" datetime="2022-06-06T16:38:32+08:00">2022-06-06</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
+                </span>
             </span>
 
           
@@ -195,8 +212,8 @@
       </span>
       <span class="post-meta-item-text">Disqus: </span>
     
-    <a title="disqus" href="/2022/06/06/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/#disqus_thread" itemprop="discussionUrl">
-      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/06/06/ClickHouse中Write与Merge/" itemprop="commentCount"></span>
+    <a title="disqus" href="/2022/06/03/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/#disqus_thread" itemprop="discussionUrl">
+      <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2022/06/03/ClickHouse中Write与Merge/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -264,6 +281,9 @@
     
 
       <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ClickHouse/" rel="tag"># ClickHouse</a>
+          </div>
 
         
 
@@ -271,10 +291,13 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2022/06/06/%E6%B5%85%E8%B0%88%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/" rel="prev" title="浅谈存算分离">
-      <i class="fa fa-chevron-left"></i> 浅谈存算分离
+    <a href="/2022/05/10/ClickHouse_%E6%9F%A5%E8%AF%A2/" rel="prev" title="ClickHouse的ReadPath">
+      <i class="fa fa-chevron-left"></i> ClickHouse的ReadPath
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2022/06/06/%E6%B5%85%E8%B0%88%E5%AD%98%E7%AE%97%E5%88%86%E7%A6%BB/" rel="next" title="浅谈存算分离">
+      浅谈存算分离 <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -502,9 +525,9 @@
 </script>
 <script>
   var disqus_config = function() {
-    this.page.url = "http://example.com/2022/06/06/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/";
-    this.page.identifier = "2022/06/06/ClickHouse中Write与Merge/";
-    this.page.title = "";
+    this.page.url = "http://example.com/2022/06/03/ClickHouse%E4%B8%ADWrite%E4%B8%8EMerge/";
+    this.page.identifier = "2022/06/03/ClickHouse中Write与Merge/";
+    this.page.title = "ClickHouse中write与merge";
     };
   NexT.utils.loadComments(document.querySelector('#disqus_thread'), () => {
     if (window.DISQUS) {
